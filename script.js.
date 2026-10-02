@@ -1,0 +1,109 @@
+const startBtn = document.getElementById('start-btn');
+const canvas = document.getElementById('visualizer');
+const ctx = canvas.getContext('2d');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let audioCtx, analyser, dataArray;
+
+// Inicia o áudio quando o usuário clica no botão
+startBtn.addEventListener('click', async () => {
+    try {
+        // Pede acesso ao áudio (no Windows, ative a Mixagem Estéreo para captar o áudio interno do PC)
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(stream);
+        
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 512; // Define a resolução da quebra de frequências
+        source.connect(analyser);
+        
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        
+        startBtn.style.display = 'none'; // Some com o botão
+        animate(); // Roda a renderização
+    } catch (err) {
+        alert('Permita o uso do microfone/áudio no navegador para visualizar.');
+        console.error(err);
+    }
+});
+
+function animate() {
+    requestAnimationFrame(animate);
+    
+    // Cria um efeito de "motion blur" redesenhando um fundo semi-transparente
+    ctx.fillStyle = 'rgba(3, 3, 3, 0.3)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    analyser.getByteFrequencyData(dataArray);
+    
+    // --- SEPARAÇÃO DE FREQUÊNCIAS ---
+    // Graves (Kicks e Sub-bass): Os primeiros índices do array (0 a 10)
+    let bass = 0;
+    for(let i = 0; i < 10; i++) bass += dataArray[i];
+    bass = bass / 10; 
+    
+    // Médios/Agudos (Synths, Hats, Caixas): Índices do meio e fim
+    let mids = 0;
+    for(let i = 20; i < 100; i++) mids += dataArray[i];
+    mids = mids / 80;
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    // --- REAÇÃO AO KICK ---
+    // Se o grave passar de 210 (batida forte), a tela vibra (shake) e a cor muda
+    let kickThreshold = 210;
+    let shakeX = 0;
+    let shakeY = 0;
+    
+    if (bass > kickThreshold) {
+        shakeX = (Math.random() - 0.5) * 20; // Vibração no eixo X
+        shakeY = (Math.random() - 0.5) * 20; // Vibração no eixo Y
+        ctx.strokeStyle = '#ff003c'; // Vermelho violento
+        ctx.lineWidth = 6;
+    } else {
+        ctx.strokeStyle = '#444'; // Cinza industrial quando está calmo
+        ctx.lineWidth = 2;
+    }
+
+    // Núcleo central que pulsa com os graves
+    let baseRadius = 50;
+    let reactiveRadius = baseRadius + (bass * 1.2);
+    
+    ctx.beginPath();
+    ctx.arc(centerX + shakeX, centerY + shakeY, reactiveRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // --- ONDAS EXTERNAS SINCRONIZADAS ---
+    // Desenha uma teia radial distorcida por todas as frequências do áudio
+    ctx.beginPath();
+    for (let i = 0; i < dataArray.length; i++) {
+        let angle = (i / dataArray.length) * Math.PI * 2;
+        let amplitude = dataArray[i]; 
+        
+        // Empurra a linha para fora baseado na altura do som naquele ponto
+        let x = centerX + shakeX + Math.cos(angle) * (reactiveRadius + amplitude + 30);
+        let y = centerY + shakeY + Math.sin(angle) * (reactiveRadius + amplitude + 30);
+        
+        if (i === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    }
+    ctx.closePath();
+    
+    // Colore o anel externo com base nos médios/agudos (glitch sutil)
+    ctx.strokeStyle = `rgb(${mids * 1.5}, ${mids * 0.5}, 255)`; // Tons de azul/roxo
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+}
+
+// Redimensiona o canvas se mudar o tamanho da janela
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
