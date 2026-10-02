@@ -7,7 +7,16 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <button id="start-btn">Injetar Áudio</button>
+    <div id="ui-container">
+        <h1>MEKXL VISUALIZER</h1>
+        <div class="controls">
+            <button id="btn-mic">Captar Sistema / Mic</button>
+            <label for="audio-upload" class="custom-file-upload">Subir MP3 / WAV</label>
+            <input type="file" id="audio-upload" accept="audio/*">
+        </div>
+        <audio id="audio-player" controls></audio>
+    </div>
+
     <canvas id="visualizer"></canvas>
     
     <script src="script.js"></script>
