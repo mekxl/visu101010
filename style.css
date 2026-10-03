@@ -1,8 +1,4 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body, html {
     background-color: #030303;
@@ -20,7 +16,6 @@ canvas {
     width: 100%;
     height: 100%;
     z-index: 1;
-    filter: contrast(1.8) saturate(1.5);
 }
 
 #ui-container {
@@ -32,7 +27,8 @@ canvas {
     justify-content: center;
     align-items: center;
     gap: 30px;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(3, 3, 3, 0.85);
+    backdrop-filter: blur(5px);
     transition: opacity 0.5s;
 }
 
@@ -40,12 +36,10 @@ h1 {
     letter-spacing: 10px;
     color: #ff003c;
     text-shadow: 0 0 15px rgba(255, 0, 60, 0.5);
+    font-size: 2.5rem;
 }
 
-.controls {
-    display: flex;
-    gap: 20px;
-}
+.controls { display: flex; gap: 20px; }
 
 button, .custom-file-upload {
     padding: 15px 30px;
@@ -66,12 +60,5 @@ button:hover, .custom-file-upload:hover {
     box-shadow: 0 0 15px #ff003c;
 }
 
-input[type="file"] {
-    display: none;
-}
-
-#audio-player {
-    display: none;
-    margin-top: 20px;
-    width: 300px;
-}
+input[type="file"] { display: none; }
+#audio-player { display: none; margin-top: 20px; width: 300px; filter: invert(1) hue-rotate(180deg); }
