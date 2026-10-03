@@ -3,27 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MEKXL // DARK TECHNO VISUALIZER</title>
+    <title>Mekxl - Audio Reactive Grid (Monochrome)</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Importando o Three.js para o ambiente 3D -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-    <div id="scanlines"></div>
+    <div id="noise-overlay"></div>
     <div id="vignette"></div>
 
     <div id="ui-container">
-        <h1 class="glitch" data-text="MEKXL // SYSTEM">MEKXL // SYSTEM</h1>
-        <div class="controls">
-            <button id="btn-mic">Captar Sistema / Mic</button>
-            <label for="audio-upload" class="custom-file-upload">Subir MP3 / WAV</label>
-            <input type="file" id="audio-upload" accept="audio/*">
+        <h1>MEKXL // AUDIO MESH</h1>
+        <div class="btn-group">
+            <button id="btn-start" class="btn">INICIAR ÁUDIO</button>
+            <button id="btn-mode" class="btn">MODO: VERTICAL</button>
         </div>
-        <audio id="audio-player" controls></audio>
+        <div id="audio-status">Clique em iniciar e selecione sua música/microfone</div>
     </div>
 
-    <canvas id="visualizer"></canvas>
-    
+    <canvas id="canvas"></canvas>
+
     <script src="script.js"></script>
 </body>
 </html>
