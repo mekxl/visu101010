@@ -2,15 +2,18 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-width=1.0">
-    <title>Mekxl - 3D Áudio Visualizer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEKXL // DARK TECHNO VISUALIZER</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Importando o Three.js para os gráficos 3D -->
+    <!-- Importando o Three.js para o ambiente 3D -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+    <div id="scanlines"></div>
+    <div id="vignette"></div>
+
     <div id="ui-container">
-        <h1>MEKXL 3D</h1>
+        <h1 class="glitch" data-text="MEKXL // SYSTEM">MEKXL // SYSTEM</h1>
         <div class="controls">
             <button id="btn-mic">Captar Sistema / Mic</button>
             <label for="audio-upload" class="custom-file-upload">Subir MP3 / WAV</label>
@@ -19,7 +22,6 @@
         <audio id="audio-player" controls></audio>
     </div>
 
-    <!-- O canvas agora vai renderizar 3D (WebGL) -->
     <canvas id="visualizer"></canvas>
     
     <script src="script.js"></script>
