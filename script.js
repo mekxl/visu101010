@@ -8,40 +8,50 @@ let isAnimating = false;
 let isPlayerConnected = false;
 
 // --------------------------------------------------------
-// SETUP DO MUNDO 3D (THREE.JS)
+// SETUP 3D (THREE.JS) - ESTÉTICA DARK TECHNO PIXELADA
 // --------------------------------------------------------
 const scene = new THREE.Scene();
-// Adiciona uma névoa escura ao fundo para dar sensação de profundidade e sumir com as bordas
-scene.fog = new THREE.FogExp2(0x030303, 0.015);
+scene.fog = new THREE.FogExp2(0x020202, 0.02);
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-// Posiciona a câmera olhando de cima e meio de lado para a malha
-camera.position.set(0, 20, 50);
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 18, 45);
 camera.lookAt(0, 0, 0);
 
+// ANTIALIAS: FALSE (Garante o visual pixelado/retro de jogo indie underground)
 const renderer = new THREE.WebGLRenderer({ 
     canvas: document.getElementById('visualizer'), 
-    antialias: true 
+    antialias: false 
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(0x030303);
+renderer.setClearColor(0x020202);
 
-// CRIAÇÃO DA MALHA (O Terreno)
-// Largura, Altura, SegmentosX, SegmentosY (128x128 gera muitos vértices para reagir ao som)
-const geometry = new THREE.PlaneGeometry(150, 150, 128, 128);
-geometry.rotateX(-Math.PI / 2); // Deita o plano para virar um chão
+// REDUZ RESOLUÇÃO INTERNA PARA ACRESCENTAR PIXEL ART NATIVA
+renderer.setPixelRatio(window.devicePixelRatio > 1 ? 1.5 : 1);
 
-const material = new THREE.MeshBasicMaterial({
-    color: 0xff003c, // O vermelho agressivo do Mekxl
-    wireframe: true, // Modo arame (sem preenchimento)
+// 1. MALHA DO CHÃO (Reage fortemente aos graves)
+const planeGeometry = new THREE.PlaneGeometry(160, 160, 64, 64);
+planeGeometry.rotateX(-Math.PI / 2);
+
+const planeMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff003c, // Vermelho sangue industrial
+    wireframe: true,
     transparent: true,
-    opacity: 0.6
+    opacity: 0.5
 });
+const terrain = new THREE.Mesh(planeGeometry, planeMaterial);
+scene.add(terrain);
 
-const plane = new THREE.Mesh(geometry, material);
-scene.add(plane);
+// 2. NÚCLEO CENTRAL (Poliedro flutuante que reage aos médios/synths)
+const coreGeometry = new THREE.IcosahedronGeometry(8, 1);
+const coreMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00ffff, // Ciano estourado
+    wireframe: true
+});
+const coreMesh = new THREE.Mesh(coreGeometry, coreMaterial);
+coreMesh.position.set(0, 12, 0);
+scene.add(coreMesh);
 
-// Redimensionamento de tela
+// Redimensionamento responsivo
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -49,14 +59,14 @@ window.addEventListener('resize', () => {
 });
 
 // --------------------------------------------------------
-// CÉREBRO DO ÁUDIO
+// SISTEMA DE ÁUDIO À PROVA DE FALHAS
 // --------------------------------------------------------
 function initAudio() {
     try {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 512; // 256 bandas de frequência
+            analyser.fftSize = 256; // Bandas otimizadas
             dataArray = new Uint8Array(analyser.frequencyBinCount);
         }
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -74,7 +84,7 @@ btnMic.addEventListener('click', async () => {
         source.connect(analyser);
         comecarVisualizacao();
     } catch (err) {
-        alert("Microfone bloqueado ou indisponível!");
+        alert("Acesso ao microfone negado ou indisponível.");
     }
 });
 
@@ -95,16 +105,17 @@ audioUpload.addEventListener('change', function(e) {
     audioPlayer.play().then(() => {
         comecarVisualizacao();
         audioPlayer.style.display = 'block';
-    }).catch(err => alert("O navegador bloqueou o Autoplay"));
+    }).catch(err => alert("O navegador bloqueou a execução automática. Dê play no player."));
 });
 
 // --------------------------------------------------------
-// MOTOR DE ANIMAÇÃO (A MÁGICA HZ -> 3D ACONTECE AQUI)
+// LOOP DE ANIMAÇÃO E SINCRONIZAÇÃO RÍTMICA
 // --------------------------------------------------------
 function comecarVisualizacao() {
-    uiContainer.style.background = 'transparent';
-    uiContainer.querySelector('h1').style.display = 'none';
-    uiContainer.querySelector('.controls').style.display = 'none';
+    uiContainer.style.opacity = '0';
+    setTimeout(() => {
+        uiContainer.style.display = 'none';
+    }, 500);
     
     if (!isAnimating) {
         isAnimating = true;
@@ -117,55 +128,54 @@ function animate() {
     
     analyser.getByteFrequencyData(dataArray);
     
-    // Captura os vértices (os pontinhos) da nossa malha 3D
-    const positions = geometry.attributes.position;
-    
-    // Lógica para dar um pulo extra na câmera quando o grave bate forte
+    // Análise de frequências específicas
     let bass = 0;
-    for(let i = 0; i < 5; i++) bass += dataArray[i];
-    bass = bass / 5;
+    for(let i = 0; i < 4; i++) bass += dataArray[i];
+    bass = bass / 4; // Graves profundos (Kicks)
     
-    if (bass > 220) {
-        camera.position.z = 50 + (Math.random() - 0.5) * 2; // Shake na câmera
-        material.color.setHex(0xffffff); // Pisca branco no Kick forte
+    let mids = 0;
+    for(let i = 10; i < 30; i++) mids += dataArray[i];
+    mids = mids / 20; // Médios / Synths
+
+    // --- REAÇÃO VISUAL AGRESSIVA ---
+    
+    // Se o bumbo bater forte, a cor do terreno fica branca/estourada e a câmera treme
+    if (bass > 210) {
+        planeMaterial.color.setHex(0xffffff);
+        camera.position.x = (Math.random() - 0.5) * 3;
+        camera.position.y = 18 + (Math.random() - 0.5) * 3;
     } else {
-        camera.position.z = 50;
-        material.color.setHex(0xff003c); // Volta pro vermelho
+        planeMaterial.color.setHex(0xff003c); // Vermelho industrial padrão
+        camera.position.x = 0;
+        camera.position.y = 18;
     }
 
-    // MAPEAR FREQUÊNCIAS PARA A MALHA
+    // Deforma a malha do chão com base nas frequências espalhadas
+    const positions = planeGeometry.attributes.position;
     for (let i = 0; i < positions.count; i++) {
         const x = positions.getX(i);
         const z = positions.getZ(i);
-
-        // Calcula a distância do vértice até o centro do mundo (0,0)
-        // Isso cria um efeito de ondas que saem do centro para as bordas
         const distance = Math.sqrt(x * x + z * z);
 
-        // Transforma a distância num índice do array de frequências (0 a 255)
-        // O centro (distância baixa) vai ler os graves.
-        // As bordas (distância alta) vão ler os agudos.
-        let index = Math.floor(distance * 1.5); 
-        
-        // Garante que o índice não passe do limite do array
-        if (index > dataArray.length - 1) index = dataArray.length - 1;
+        let index = Math.floor((distance / 160) * dataArray.length);
+        if (index >= dataArray.length) index = dataArray.length - 1;
 
-        // Pega o volume daquela frequência específica
-        const amplitude = dataArray[index];
-        
-        // Define a altura (Y) do ponto na malha com base no volume
-        // Frequências graves (centro) têm um multiplicador extra para as montanhas ficarem mais altas
-        const kickMultiplier = (index < 20) ? 2.5 : 1;
-        const height = (amplitude / 255) * 15 * kickMultiplier;
+        const amp = dataArray[index];
+        const boost = (index < 6) ? 2.8 : 1.0; // Dá mais altura pross sub-graves do centro
+        const height = (amp / 255) * 18 * boost;
 
         positions.setY(i, height);
     }
-    
-    // Avisa a placa de vídeo que a malha foi deformada e precisa ser redesenhada
     positions.needsUpdate = true;
-    
-    // Gira a malha devagarzinho pra dar um efeito cinematográfico
-    plane.rotation.z -= 0.002;
+
+    // Faz o núcleo geométrico central pulsar e girar conforme os synths e médios
+    let coreScale = 1 + (mids / 120);
+    coreMesh.scale.set(coreScale, coreScale, coreScale);
+    coreMesh.rotation.x += 0.01;
+    coreMesh.rotation.y += 0.015;
+
+    // Rotação lenta e claustrofóbica do terreno
+    terrain.rotation.z -= 0.0015;
 
     renderer.render(scene, camera);
 }
