@@ -14,7 +14,7 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-// Configuração do Áudio (Microfone ou Arquivo)
+// Controles UI
 const btnStart = document.getElementById('btn-start');
 const btnMode = document.getElementById('btn-mode');
 const audioStatus = document.getElementById('audio-status');
@@ -24,9 +24,8 @@ btnStart.addEventListener('click', async () => {
         try {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             analyser = audioContext.createAnalyser();
-            analyser.fftSize = 512;
+            analyser.fftSize = 256; // Reduzido para mapear blocos discretos de frequências
             
-            // Permissão de microfone como fonte reativa principal
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             microphone = audioContext.createMediaStreamSource(stream);
             microphone.connect(analyser);
@@ -35,7 +34,7 @@ btnStart.addEventListener('click', async () => {
             isAudioInitialized = true;
             btnStart.textContent = "ÁUDIO ATIVO";
             btnStart.style.borderColor = "#ffffff";
-            audioStatus.textContent = "Reagindo ao som ambiente/microfone";
+            audioStatus.textContent = "Espectro fragmentado por Hz ativo";
         } catch (err) {
             console.error("Erro ao acessar microfone:", err);
             audioStatus.textContent = "Erro ao acessar microfone. Verifique as permissões.";
@@ -47,7 +46,6 @@ btnStart.addEventListener('click', async () => {
     }
 });
 
-// Alternar modo de visualização
 btnMode.addEventListener('click', () => {
     if (currentMode === 'vertical') {
         currentMode = 'horizontal';
@@ -58,9 +56,9 @@ btnMode.addEventListener('click', () => {
     }
 });
 
-// Malha de Vértices Estática (Apenas reage ao som)
-const cols = 36;
-const rows = 24;
+// Malha de Vértices Estática
+const cols = 40;
+const rows = 28;
 let points = [];
 
 function initGrid() {
@@ -70,8 +68,7 @@ function initGrid() {
         for (let c = 0; c <= cols; c++) {
             row.push({
                 xOrg: c / cols,
-                yOrg: r / rows,
-                z: 0
+                yOrg: r / rows
             });
         }
         points.push(row);
@@ -79,30 +76,19 @@ function initGrid() {
 }
 initGrid();
 
-let time = 0;
-
 function animate() {
     requestAnimationFrame(animate);
 
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    let audioLevel = 0;
+    // Captura o espectro de frequências (se ativo)
     if (isAudioInitialized && analyser) {
         analyser.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i];
-        }
-        audioLevel = sum / dataArray.length / 128.0; // Normalizado 0 a ~2+
     }
 
-    time += 0.03 + (audioLevel * 0.05);
-
-    // Projeção 3D para 2D
     const w = canvas.width;
     const h = canvas.height;
-
     let projectedGrid = [];
 
     for (let r = 0; r <= rows; r++) {
@@ -110,27 +96,31 @@ function animate() {
         for (let c = 0; c <= cols; c++) {
             let p = points[r][c];
             
-            // Coordenadas normalizadas -0.5 a 0.5
             let nx = p.xOrg - 0.5;
             let ny = p.yOrg - 0.5;
             let nz = 0;
 
-            // Modulação por onda e áudio
-            let wave = Math.sin(nx * 6 + time) * Math.cos(ny * 6 + time);
-            let audioEffect = audioLevel * Math.sin(nx * 12 + ny * 12 - time * 2);
-            nz = (wave * 0.2) + (audioEffect * 0.5);
+            if (isAudioInitialized && dataArray) {
+                // Cada coluna e linha aponta para uma frequência específica (Hz) diferente do array
+                // Isso cria picos isolados e psicodélicos espalhados pela malha
+                let freqIndex = Math.floor(Math.abs(nx * ny * 45)) % dataArray.length;
+                let rawAmp = dataArray[freqIndex] / 255.0; // Normalizado 0 a 1
+
+                // Adiciona ruído estocástico psicodélico baseado na posição
+                nz = Math.pow(rawAmp, 1.8) * (Math.sin(c * 1.5 + r * 1.5) * 0.8 + 0.6);
+            }
 
             let px, py;
 
             if (currentMode === 'vertical') {
-                // Modo Vertical (Chão inclinado em perspectiva)
-                let scale = 1.0 / (p.yOrg * 1.5 + 0.5);
+                // Modo Vertical (Chão inclinado)
+                let scale = 1.0 / (p.yOrg * 1.6 + 0.4);
                 px = w * 0.5 + nx * w * 1.8 * scale;
-                py = h * 0.35 + (p.yOrg * h * 0.8) + (nz * h * 0.3);
+                py = h * 0.35 + (p.yOrg * h * 0.85) - (nz * h * 0.45);
             } else {
-                // Modo Horizontal (Parede frontal completa cobrindo a tela)
+                // Modo Horizontal (Parede frontal completa)
                 px = w * 0.5 + nx * w * 0.95;
-                py = h * 0.5 + ny * h * 0.95 + (nz * h * 0.25);
+                py = h * 0.5 + ny * h * 0.95 - (nz * h * 0.35);
             }
 
             projectedRow.push({ x: px, y: py, z: nz });
@@ -138,7 +128,7 @@ function animate() {
         projectedGrid.push(projectedRow);
     }
 
-    // Desenhar linhas da malha (Preto e Branco puro)
+    // Desenhar linhas da malha em Preto e Branco puro com intensidade reativa
     ctx.lineWidth = 1.2;
 
     // Linhas Horizontais
@@ -149,9 +139,9 @@ function animate() {
             if (c === 0) ctx.moveTo(pt.x, pt.y);
             else ctx.lineTo(pt.x, pt.y);
         }
-        // Intensidade de brilho baseada no Z (profundidade / reação ao som)
-        let alpha = 0.15 + Math.abs(projectedGrid[r][0].z) * 0.8;
-        ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(alpha, 1.0)})`;
+        let avgZ = projectedGrid[r][Math.floor(cols/2)].z;
+        let alpha = 0.1 + avgZ * 0.9;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(Math.max(alpha, 0.1), 1.0)})`;
         ctx.stroke();
     }
 
@@ -163,8 +153,9 @@ function animate() {
             if (r === 0) ctx.moveTo(pt.x, pt.y);
             else ctx.lineTo(pt.x, pt.y);
         }
-        let alpha = 0.15 + Math.abs(projectedGrid[0][c].z) * 0.8;
-        ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(alpha, 1.0)})`;
+        let avgZ = projectedGrid[Math.floor(rows/2)][c].z;
+        let alpha = 0.1 + avgZ * 0.9;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(Math.max(alpha, 0.1), 1.0)})`;
         ctx.stroke();
     }
 }
