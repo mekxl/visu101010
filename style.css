@@ -5,41 +5,12 @@
 }
 
 body, html {
-    background-color: #020202;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
-    width: 100vw;
-    height: 100vh;
+    background-color: #000000;
     font-family: 'Courier New', Courier, monospace;
-    color: #fff;
-}
-
-/* Camada de Scanlines estilo TV CRT antiga */
-#scanlines {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    background: linear-gradient(
-        rgba(18, 16, 16, 0) 50%, 
-        rgba(0, 0, 0, 0.4) 50%
-    );
-    background-size: 100% 4px;
-    z-index: 5;
-    opacity: 0.7;
-}
-
-/* Vinheta escura nas bordas para clima de terror/subsolo */
-#vignette {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.95);
-    z-index: 6;
+    color: #ffffff;
 }
 
 canvas {
@@ -51,59 +22,98 @@ canvas {
     z-index: 1;
 }
 
+/* Efeito granulado (Film Grain) */
+#noise-overlay {
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    z-index: 3;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+    opacity: 0.7;
+    animation: grain 0.5s steps(4) infinite;
+}
+
+@keyframes grain {
+    0% { transform: translate(0, 0); }
+    10% { transform: translate(-5%, -5%); }
+    20% { transform: translate(-10%, 5%); }
+    30% { transform: translate(5%, -10%); }
+    40% { transform: translate(-5%, 15%); }
+    50% { transform: translate(-15%, 5%); }
+    60% { transform: translate(15%, 0); }
+    70% { transform: translate(0, 10%); }
+    80% { transform: translate(15%, -10%); }
+    90% { transform: translate(-10%, 10%); }
+    100% { transform: translate(0, 0); }
+}
+
+/* Vinheta escura e Scanlines */
+#vignette {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+    background: radial-gradient(circle at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.9) 95%),
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+    background-size: 100% 4px;
+}
+
+/* Painel de Controle UI */
 #ui-container {
-    position: relative;
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 10;
-    height: 100vh;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    gap: 30px;
-    background: rgba(2, 2, 2, 0.92);
-    transition: opacity 0.5s ease;
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 15px 25px;
+    backdrop-filter: blur(5px);
 }
 
 h1 {
-    letter-spacing: 12px;
-    color: #ff003c;
-    text-shadow: 2px 2px 0px #00ffff, -2px -2px 0px #ff003c;
-    font-size: 2.2rem;
-    font-weight: 900;
-}
-
-.controls {
-    display: flex;
-    gap: 20px;
-}
-
-button, .custom-file-upload {
-    padding: 15px 35px;
     font-size: 0.9rem;
-    background: #050505;
-    color: #ff003c;
-    border: 2px solid #ff003c;
-    cursor: pointer;
+    letter-spacing: 4px;
+    color: #ffffff;
     text-transform: uppercase;
-    letter-spacing: 3px;
-    font-weight: bold;
-    box-shadow: inset 0 0 10px rgba(255, 0, 60, 0.2);
-    transition: all 0.1s ease-in-out;
+    font-weight: 700;
 }
 
-button:hover, .custom-file-upload:hover {
-    background: #ff003c;
-    color: #020202;
-    box-shadow: 0 0 20px #ff003c, inset 0 0 15px rgba(0,0,0,0.5);
+.btn-group {
+    display: flex;
+    gap: 10px;
 }
 
-input[type="file"] {
-    display: none;
+.btn {
+    background: #000000;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+    padding: 8px 16px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
 }
 
-#audio-player {
-    display: none;
-    margin-top: 20px;
-    width: 320px;
-    filter: invert(1) grayscale(1) contrast(200%);
+.btn:hover {
+    background: #ffffff;
+    color: #000000;
+}
+
+#audio-status {
+    font-size: 0.65rem;
+    color: #888888;
+    letter-spacing: 1px;
 }
