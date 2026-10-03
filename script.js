@@ -2,90 +2,104 @@ const btnMic = document.getElementById('btn-mic');
 const audioUpload = document.getElementById('audio-upload');
 const audioPlayer = document.getElementById('audio-player');
 const uiContainer = document.getElementById('ui-container');
-const canvas = document.getElementById('visualizer');
-const ctx = canvas.getContext('2d');
-
-function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-resize();
-window.addEventListener('resize', resize);
 
 let audioCtx, analyser, dataArray, source;
 let isAnimating = false;
 let isPlayerConnected = false;
 
-// Cérebro do áudio blindado contra erros de contexto
+// --------------------------------------------------------
+// SETUP DO MUNDO 3D (THREE.JS)
+// --------------------------------------------------------
+const scene = new THREE.Scene();
+// Adiciona uma névoa escura ao fundo para dar sensação de profundidade e sumir com as bordas
+scene.fog = new THREE.FogExp2(0x030303, 0.015);
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+// Posiciona a câmera olhando de cima e meio de lado para a malha
+camera.position.set(0, 20, 50);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ 
+    canvas: document.getElementById('visualizer'), 
+    antialias: true 
+});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x030303);
+
+// CRIAÇÃO DA MALHA (O Terreno)
+// Largura, Altura, SegmentosX, SegmentosY (128x128 gera muitos vértices para reagir ao som)
+const geometry = new THREE.PlaneGeometry(150, 150, 128, 128);
+geometry.rotateX(-Math.PI / 2); // Deita o plano para virar um chão
+
+const material = new THREE.MeshBasicMaterial({
+    color: 0xff003c, // O vermelho agressivo do Mekxl
+    wireframe: true, // Modo arame (sem preenchimento)
+    transparent: true,
+    opacity: 0.6
+});
+
+const plane = new THREE.Mesh(geometry, material);
+scene.add(plane);
+
+// Redimensionamento de tela
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// --------------------------------------------------------
+// CÉREBRO DO ÁUDIO
+// --------------------------------------------------------
 function initAudio() {
     try {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 512;
+            analyser.fftSize = 512; // 256 bandas de frequência
             dataArray = new Uint8Array(analyser.frequencyBinCount);
         }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
     } catch (e) {
         alert("Erro no AudioContext: " + e.message);
     }
 }
 
-// --------------------------------------------------------
-// OPÇÃO 1: MICROFONE / SISTEMA
-// --------------------------------------------------------
 btnMic.addEventListener('click', async () => {
     try {
         initAudio();
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
         if (source) source.disconnect();
         source = audioCtx.createMediaStreamSource(stream);
         source.connect(analyser);
-        
         comecarVisualizacao();
     } catch (err) {
-        alert("Bloqueado!\nMotivo: " + err.message + "\n\nVocê abriu o index.html com 2 cliques? Navegadores bloqueiam o áudio assim. Teste pelo link do GitHub Pages!");
+        alert("Microfone bloqueado ou indisponível!");
     }
 });
 
-// --------------------------------------------------------
-// OPÇÃO 2: SUBIR ARQUIVO (MP3/WAV)
-// --------------------------------------------------------
 audioUpload.addEventListener('change', function(e) {
-    try {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        initAudio();
-        
-        const fileURL = URL.createObjectURL(file);
-        audioPlayer.src = fileURL;
-        
-        if (!isPlayerConnected) {
-            source = audioCtx.createMediaElementSource(audioPlayer);
-            source.connect(analyser);
-            analyser.connect(audioCtx.destination);
-            isPlayerConnected = true;
-        }
-        
-        // Tenta reproduzir e avisa se o navegador impedir
-        audioPlayer.play().then(() => {
-            comecarVisualizacao();
-            audioPlayer.style.display = 'block';
-        }).catch(err => {
-            alert("O navegador bloqueou o Autoplay: " + err.message);
-        });
-        
-    } catch (err) {
-        alert("Erro ao processar o arquivo: " + err.message);
+    const file = e.target.files[0];
+    if (!file) return;
+    initAudio();
+    const fileURL = URL.createObjectURL(file);
+    audioPlayer.src = fileURL;
+    
+    if (!isPlayerConnected) {
+        source = audioCtx.createMediaElementSource(audioPlayer);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+        isPlayerConnected = true;
     }
+    
+    audioPlayer.play().then(() => {
+        comecarVisualizacao();
+        audioPlayer.style.display = 'block';
+    }).catch(err => alert("O navegador bloqueou o Autoplay"));
 });
 
 // --------------------------------------------------------
-// MOTOR GRÁFICO (Sem alterações no design)
+// MOTOR DE ANIMAÇÃO (A MÁGICA HZ -> 3D ACONTECE AQUI)
 // --------------------------------------------------------
 function comecarVisualizacao() {
     uiContainer.style.background = 'transparent';
@@ -101,60 +115,57 @@ function comecarVisualizacao() {
 function animate() {
     requestAnimationFrame(animate);
     
-    ctx.fillStyle = 'rgba(3, 3, 3, 0.3)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
     analyser.getByteFrequencyData(dataArray);
     
+    // Captura os vértices (os pontinhos) da nossa malha 3D
+    const positions = geometry.attributes.position;
+    
+    // Lógica para dar um pulo extra na câmera quando o grave bate forte
     let bass = 0;
-    for(let i = 0; i < 10; i++) bass += dataArray[i];
-    bass = bass / 10; 
+    for(let i = 0; i < 5; i++) bass += dataArray[i];
+    bass = bass / 5;
     
-    let mids = 0;
-    for(let i = 20; i < 100; i++) mids += dataArray[i];
-    mids = mids / 80;
-
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-
-    let kickThreshold = 210;
-    let shakeX = 0;
-    let shakeY = 0;
-    
-    if (bass > kickThreshold) {
-        shakeX = (Math.random() - 0.5) * 20;
-        shakeY = (Math.random() - 0.5) * 20;
-        ctx.strokeStyle = '#ff003c'; 
-        ctx.lineWidth = 6;
+    if (bass > 220) {
+        camera.position.z = 50 + (Math.random() - 0.5) * 2; // Shake na câmera
+        material.color.setHex(0xffffff); // Pisca branco no Kick forte
     } else {
-        ctx.strokeStyle = '#444'; 
-        ctx.lineWidth = 2;
+        camera.position.z = 50;
+        material.color.setHex(0xff003c); // Volta pro vermelho
     }
 
-    let baseRadius = 50;
-    let reactiveRadius = baseRadius + (bass * 1.2);
-    
-    ctx.beginPath();
-    ctx.arc(centerX + shakeX, centerY + shakeY, reactiveRadius, 0, Math.PI * 2);
-    ctx.stroke();
+    // MAPEAR FREQUÊNCIAS PARA A MALHA
+    for (let i = 0; i < positions.count; i++) {
+        const x = positions.getX(i);
+        const z = positions.getZ(i);
 
-    ctx.beginPath();
-    for (let i = 0; i < dataArray.length; i++) {
-        let angle = (i / dataArray.length) * Math.PI * 2;
-        let amplitude = dataArray[i]; 
+        // Calcula a distância do vértice até o centro do mundo (0,0)
+        // Isso cria um efeito de ondas que saem do centro para as bordas
+        const distance = Math.sqrt(x * x + z * z);
+
+        // Transforma a distância num índice do array de frequências (0 a 255)
+        // O centro (distância baixa) vai ler os graves.
+        // As bordas (distância alta) vão ler os agudos.
+        let index = Math.floor(distance * 1.5); 
         
-        let x = centerX + shakeX + Math.cos(angle) * (reactiveRadius + amplitude + 30);
-        let y = centerY + shakeY + Math.sin(angle) * (reactiveRadius + amplitude + 30);
+        // Garante que o índice não passe do limite do array
+        if (index > dataArray.length - 1) index = dataArray.length - 1;
+
+        // Pega o volume daquela frequência específica
+        const amplitude = dataArray[index];
         
-        if (i === 0) {
-            ctx.moveTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
-        }
+        // Define a altura (Y) do ponto na malha com base no volume
+        // Frequências graves (centro) têm um multiplicador extra para as montanhas ficarem mais altas
+        const kickMultiplier = (index < 20) ? 2.5 : 1;
+        const height = (amplitude / 255) * 15 * kickMultiplier;
+
+        positions.setY(i, height);
     }
-    ctx.closePath();
     
-    ctx.strokeStyle = `rgb(${mids * 1.5}, ${mids * 0.5}, 255)`; 
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    // Avisa a placa de vídeo que a malha foi deformada e precisa ser redesenhada
+    positions.needsUpdate = true;
+    
+    // Gira a malha devagarzinho pra dar um efeito cinematográfico
+    plane.rotation.z -= 0.002;
+
+    renderer.render(scene, camera);
 }
