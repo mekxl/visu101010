@@ -1,12 +1,45 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
 body, html {
-    background-color: #030303;
+    background-color: #020202;
     overflow: hidden;
     width: 100vw;
     height: 100vh;
-    font-family: monospace;
+    font-family: 'Courier New', Courier, monospace;
     color: #fff;
+}
+
+/* Camada de Scanlines estilo TV CRT antiga */
+#scanlines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.4) 50%
+    );
+    background-size: 100% 4px;
+    z-index: 5;
+    opacity: 0.7;
+}
+
+/* Vinheta escura nas bordas para clima de terror/subsolo */
+#vignette {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.95);
+    z-index: 6;
 }
 
 canvas {
@@ -27,38 +60,50 @@ canvas {
     justify-content: center;
     align-items: center;
     gap: 30px;
-    background: rgba(3, 3, 3, 0.85);
-    backdrop-filter: blur(5px);
-    transition: opacity 0.5s;
+    background: rgba(2, 2, 2, 0.92);
+    transition: opacity 0.5s ease;
 }
 
 h1 {
-    letter-spacing: 10px;
+    letter-spacing: 12px;
     color: #ff003c;
-    text-shadow: 0 0 15px rgba(255, 0, 60, 0.5);
-    font-size: 2.5rem;
+    text-shadow: 2px 2px 0px #00ffff, -2px -2px 0px #ff003c;
+    font-size: 2.2rem;
+    font-weight: 900;
 }
 
-.controls { display: flex; gap: 20px; }
+.controls {
+    display: flex;
+    gap: 20px;
+}
 
 button, .custom-file-upload {
-    padding: 15px 30px;
-    font-size: 1rem;
-    background: transparent;
+    padding: 15px 35px;
+    font-size: 0.9rem;
+    background: #050505;
     color: #ff003c;
     border: 2px solid #ff003c;
     cursor: pointer;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     font-weight: bold;
-    transition: all 0.2s ease-in-out;
+    box-shadow: inset 0 0 10px rgba(255, 0, 60, 0.2);
+    transition: all 0.1s ease-in-out;
 }
 
 button:hover, .custom-file-upload:hover {
     background: #ff003c;
-    color: #030303;
-    box-shadow: 0 0 15px #ff003c;
+    color: #020202;
+    box-shadow: 0 0 20px #ff003c, inset 0 0 15px rgba(0,0,0,0.5);
 }
 
-input[type="file"] { display: none; }
-#audio-player { display: none; margin-top: 20px; width: 300px; filter: invert(1) hue-rotate(180deg); }
+input[type="file"] {
+    display: none;
+}
+
+#audio-player {
+    display: none;
+    margin-top: 20px;
+    width: 320px;
+    filter: invert(1) grayscale(1) contrast(200%);
+}
