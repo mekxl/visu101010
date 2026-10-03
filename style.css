@@ -22,7 +22,7 @@ canvas {
     z-index: 1;
 }
 
-/* Efeito granulado (Film Grain) */
+/* Efeito granulado de filme (Film Grain) */
 #noise-overlay {
     position: fixed;
     top: -50%;
@@ -59,8 +59,8 @@ canvas {
     height: 100%;
     z-index: 2;
     pointer-events: none;
-    background: radial-gradient(circle at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.9) 95%),
-                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+    background: radial-gradient(circle at center, rgba(0,0,0,0) 30%, rgba(0,0,0,0.95) 90%),
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%);
     background-size: 100% 4px;
 }
 
